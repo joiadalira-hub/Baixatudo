@@ -1,0 +1,37 @@
+name: Print do app (emulador)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  shot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ativar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: Baixar o APK publicado
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download -R ${{ github.repository }} --pattern BaixaTudo-universal.apk
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb install -r BaixaTudo-universal.apk
+            adb shell am start -n com.baixatudo.app/.MainActivity
+            sleep 25
+            adb exec-out screencap -p > tela1.png
+            adb shell input swipe 500 1800 500 400 400
+            sleep 3
+            adb exec-out screencap -p > tela2.png
+            adb shell input tap 300 1000 || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prints
+          path: tela*.png
