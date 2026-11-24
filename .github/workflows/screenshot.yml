@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api: [30, 34]
+        api: [30]
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -40,16 +40,11 @@ jobs:
           disable-animations: true
           script: |
             timeout 120 adb install -r out/BaixaTudo-universal.apk
-            timeout 10 adb logcat -c || true
-            timeout 30 adb shell am start -W -n com.baixatudo.app/.MainActivity || true
-            sleep 8
-            timeout 20 adb exec-out screencap -p > tela1.png || true
-            sleep 10
-            timeout 20 adb exec-out screencap -p > tela1b.png || true
-            timeout 10 adb shell input swipe 540 1900 540 500 500 || true
+            timeout 30 adb shell am start -W -n com.baixatudo.app/.SplashActivity || true
+            for i in 1 2 3 4 5; do timeout 10 adb exec-out screencap -p > tela$i.png || true; sleep 0.25; done
             sleep 3
-            timeout 20 adb exec-out screencap -p > tela2.png || true
-            timeout 20 adb logcat -d > log.txt || true
+            timeout 10 adb exec-out screencap -p > tela9.png || true
+            timeout 20 adb logcat -d -b crash > log.txt || true
       - name: Guardar
         if: always()
         run: |
