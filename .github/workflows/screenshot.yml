@@ -27,15 +27,17 @@ jobs:
           disable-animations: true
           script: |
             adb install -r BaixaTudo-universal.apk
-            adb shell am start -n com.baixatudo.app/.MainActivity
-            sleep 25
+            adb logcat -c
+            adb shell monkey -p com.baixatudo.app -c android.intent.category.LAUNCHER 1
+            sleep 30
             adb exec-out screencap -p > tela1.png
-            adb shell input swipe 500 1800 500 400 400
+            adb shell input swipe 540 1900 540 500 500
             sleep 3
             adb exec-out screencap -p > tela2.png
-            adb shell input tap 300 1000 || true
+            adb logcat -d -b crash > log.txt || true
+            adb logcat -d | grep -iE "baixatudo|AndroidRuntime|FATAL" | tail -200 >> log.txt || true
       - name: Guardar os prints na ramificação "prints"
         run: |
-          mkdir p && mv tela*.png p/ && cd p
+          mkdir p && mv tela*.png log.txt p/ && cd p
           git init -q -b prints && git add . && git -c user.name=bot -c user.email=bot@users.noreply.github.com commit -qm prints
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" prints
