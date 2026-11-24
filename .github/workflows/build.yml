@@ -2,7 +2,13 @@ name: Gerar APK
 
 on:
   push:
+    paths:
+      - "BaixaTudo.zip"
+      - ".github/workflows/build.yml"
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -26,7 +32,22 @@ jobs:
         working-directory: BaixaTudo
         run: gradle assembleDebug --no-daemon
 
+      - name: Preparar arquivos
+        run: |
+          mkdir out
+          cp BaixaTudo/app/build/outputs/apk/debug/*arm64-v8a*.apk out/BaixaTudo.apk
+          cp BaixaTudo/app/build/outputs/apk/debug/*universal*.apk out/BaixaTudo-universal.apk
+
       - uses: actions/upload-artifact@v4
         with:
           name: BaixaTudo-apk
-          path: BaixaTudo/app/build/outputs/apk/debug/*arm64-v8a*.apk
+          path: out/BaixaTudo.apk
+
+      - name: Publicar versão (link fixo para baixar no celular)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ github.run_number }}" out/BaixaTudo.apk out/BaixaTudo-universal.apk \
+            --title "BaixaTudo (versão ${{ github.run_number }})" \
+            --notes "Baixe o BaixaTudo.apk e instale. Para outros celulares Android antigos, use o BaixaTudo-universal.apk." \
+            --latest
