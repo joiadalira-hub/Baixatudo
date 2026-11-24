@@ -40,14 +40,64 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BaixaTudo-apk
-          path: out/BaixaTudo.apk
+          name: apks
+          path: out/
+
+  # Abre o app num celular virtual: se fechar sozinho, NÃO publica
+  testar-e-publicar:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: apks
+          path: out
+
+      - name: Ativar KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Abrir o app no emulador
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb install -r out/BaixaTudo-universal.apk
+            adb logcat -c
+            adb shell monkey -p com.baixatudo.app -c android.intent.category.LAUNCHER 1
+            sleep 30
+            adb exec-out screencap -p > tela1.png
+            adb shell input swipe 540 1900 540 500 500
+            sleep 3
+            adb exec-out screencap -p > tela2.png
+            adb logcat -d -b crash > log.txt || true
+            adb shell pidof com.baixatudo.app > pid.txt || true
+
+      - name: Guardar prints na ramificação "prints"
+        if: always()
+        run: |
+          mkdir p && cp tela*.png log.txt p/ 2>/dev/null || true
+          cd p && git init -q -b prints && git add . && git -c user.name=bot -c user.email=bot@users.noreply.github.com commit -qm prints
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" prints
+
+      - name: Conferir que o app não fechou
+        run: |
+          if grep -q "FATAL EXCEPTION" log.txt || [ ! -s pid.txt ]; then
+            echo "O app fechou ao abrir:"; cat log.txt | head -60; exit 1
+          fi
+          echo "App abriu e continua rodando."
 
       - name: Publicar versão (link fixo para baixar no celular)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v${{ github.run_number }}" out/BaixaTudo.apk out/BaixaTudo-universal.apk \
+            -R ${{ github.repository }} \
             --title "BaixaTudo (versão ${{ github.run_number }})" \
             --notes "Baixe o BaixaTudo.apk e instale. Para outros celulares Android antigos, use o BaixaTudo-universal.apk." \
             --latest
