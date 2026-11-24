@@ -59,6 +59,7 @@ jobs:
           sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
 
       - name: Abrir o app no emulador
+        timeout-minutes: 15
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -66,19 +67,17 @@ jobs:
           target: google_apis
           profile: pixel_6
           disable-animations: true
-          cores: 4
-          ram-size: 4096M
           script: |
-            adb install -r out/BaixaTudo-universal.apk
-            adb logcat -c
-            adb shell monkey -p com.baixatudo.app -c android.intent.category.LAUNCHER 1
+            timeout 120 adb install -r out/BaixaTudo-universal.apk
+            timeout 10 adb logcat -c || true
+            timeout 30 adb shell monkey -p com.baixatudo.app -c android.intent.category.LAUNCHER 1 || true
             sleep 25
-            adb wait-for-device; adb exec-out screencap -p > tela1.png || true
-            adb shell input swipe 540 1900 540 500 500 || true
+            timeout 20 adb exec-out screencap -p > tela1.png || true
+            timeout 10 adb shell input swipe 540 1900 540 500 500 || true
             sleep 3
-            adb exec-out screencap -p > tela2.png || true
-            adb logcat -d -b crash > log.txt || true
-            adb shell pidof com.baixatudo.app > pid.txt || true
+            timeout 20 adb exec-out screencap -p > tela2.png || true
+            timeout 20 adb logcat -d -b crash > log.txt || true
+            timeout 10 adb shell pidof com.baixatudo.app > pid.txt || true
 
       - name: Guardar prints na ramificação "prints"
         if: always()
