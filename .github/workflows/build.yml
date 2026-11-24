@@ -66,15 +66,17 @@ jobs:
           target: google_apis
           profile: pixel_6
           disable-animations: true
+          cores: 4
+          ram-size: 4096M
           script: |
             adb install -r out/BaixaTudo-universal.apk
             adb logcat -c
             adb shell monkey -p com.baixatudo.app -c android.intent.category.LAUNCHER 1
-            sleep 30
-            adb exec-out screencap -p > tela1.png
-            adb shell input swipe 540 1900 540 500 500
+            sleep 25
+            adb wait-for-device; adb exec-out screencap -p > tela1.png || true
+            adb shell input swipe 540 1900 540 500 500 || true
             sleep 3
-            adb exec-out screencap -p > tela2.png
+            adb exec-out screencap -p > tela2.png || true
             adb logcat -d -b crash > log.txt || true
             adb shell pidof com.baixatudo.app > pid.txt || true
 
