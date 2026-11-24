@@ -3,6 +3,9 @@ name: Print do app (emulador)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   shot:
     runs-on: ubuntu-latest
@@ -31,7 +34,8 @@ jobs:
             sleep 3
             adb exec-out screencap -p > tela2.png
             adb shell input tap 300 1000 || true
-      - uses: actions/upload-artifact@v4
-        with:
-          name: prints
-          path: tela*.png
+      - name: Guardar os prints na ramificação "prints"
+        run: |
+          mkdir p && mv tela*.png p/ && cd p
+          git init -q -b prints && git add . && git -c user.name=bot -c user.email=bot@users.noreply.github.com commit -qm prints
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" prints
